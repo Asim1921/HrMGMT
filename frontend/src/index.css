@@ -1,0 +1,303 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Theme color system (slate scale via CSS custom properties) ── */
+:root {
+  --slate-50:  248 250 252;
+  --slate-100: 241 245 249;
+  --slate-200: 226 232 240;
+  --slate-300: 203 213 225;
+  --slate-400: 148 163 184;
+  --slate-500: 100 116 139;
+  --slate-600: 71 85 105;
+  --slate-700: 51 65 85;
+  --slate-800: 30 41 59;
+  --slate-900: 15 23 42;
+  --slate-950: 2 6 23;
+
+  --th-gradient-page: linear-gradient(to bottom right, #020617, #0f172a, #0f172a);
+  --th-gradient-glow-top: rgba(45,58,31,0.2);
+  --th-gradient-glow-bot: rgba(74,93,46,0.2);
+  --th-shadow-card: rgba(0,0,0,0.3);
+  --th-spotlight: rgba(106,124,66,0.15);
+  --th-spotlight-border: rgba(106,124,66,0.25);
+  --military-pale: 232 237 216;
+}
+
+.light-theme {
+  --slate-950: 245 247 241;
+  --slate-900: 255 255 255;
+  --slate-800: 237 241 231;
+  --slate-700: 200 209 189;
+  --slate-600: 120 132 110;
+  --slate-500: 90 103 80;
+  --slate-400: 75 88 65;
+  --slate-300: 55 68 46;
+  --slate-200: 42 54 34;
+  --slate-100: 32 43 24;
+  --slate-50:  22 33 16;
+
+  --th-gradient-page: linear-gradient(to bottom right, #f5f7f1, #eef2e6, #f5f7f1);
+  --th-gradient-glow-top: rgba(74,93,46,0.06);
+  --th-gradient-glow-bot: rgba(107,124,66,0.06);
+  --th-shadow-card: rgba(74,93,46,0.08);
+  --th-spotlight: rgba(74,93,46,0.08);
+  --th-spotlight-border: rgba(74,93,46,0.15);
+  --military-pale: 45 58 31;
+}
+
+body {
+  @apply bg-slate-950 text-slate-50 antialiased;
+  cursor: default;
+}
+
+.light-theme body,
+.light-theme {
+  color-scheme: light;
+}
+
+body,
+.sidebar-wrap,
+main,
+nav,
+header,
+section,
+article {
+  transition: background-color 0.35s ease, color 0.3s ease, border-color 0.35s ease;
+}
+
+input, textarea, select, [contenteditable="true"] {
+  cursor: text;
+}
+
+a, button, [role="button"], label[for], select {
+  cursor: pointer;
+}
+
+.logo-spin-slow {
+  animation: none;
+  transform-origin: center;
+}
+
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+/* ── Auth pages animations ── */
+@keyframes progress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes auth-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(3deg); }
+}
+
+@keyframes auth-float-reverse {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(14px) rotate(-2deg); }
+}
+
+@keyframes auth-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes auth-pulse-ring {
+  0% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+@keyframes auth-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes auth-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes auth-fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes auth-border-glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes auth-scan {
+  0% { top: 0%; }
+  50% { top: 100%; }
+  100% { top: 0%; }
+}
+
+.auth-float { animation: auth-float 6s ease-in-out infinite; }
+.auth-float-reverse { animation: auth-float-reverse 7s ease-in-out infinite; }
+.auth-float-slow { animation: auth-float 10s ease-in-out infinite; }
+.auth-orbit { animation: auth-orbit 20s linear infinite; }
+.auth-orbit-reverse { animation: auth-orbit 25s linear infinite reverse; }
+
+.auth-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(15,23,42,0.8), rgba(30,41,59,0.6));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.light-theme .auth-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(245,247,241,0.85));
+  box-shadow: 0 8px 32px rgba(74,93,46,0.1), 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.auth-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(74,93,46,0.4), rgba(107,124,66,0.1), rgba(74,93,46,0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: auth-border-glow 4s ease-in-out infinite;
+}
+.light-theme .auth-card::before {
+  background: linear-gradient(135deg, rgba(74,93,46,0.25), rgba(107,124,66,0.08), rgba(74,93,46,0.15));
+}
+
+.auth-input {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.auth-input:focus {
+  box-shadow: 0 0 0 3px rgba(74,93,46,0.15), 0 0 20px rgba(74,93,46,0.1);
+}
+.light-theme .auth-input {
+  background: rgba(255,255,255,0.7) !important;
+  border-color: rgb(200 209 189) !important;
+  color: #1e293b !important;
+}
+.light-theme .auth-input:focus {
+  box-shadow: 0 0 0 3px rgba(74,93,46,0.12), 0 0 15px rgba(74,93,46,0.06);
+  border-color: #4a5d2e !important;
+  background: rgba(255,255,255,0.95) !important;
+}
+.light-theme .auth-input::placeholder {
+  color: rgb(140 155 130) !important;
+}
+
+.auth-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.auth-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: translateX(-100%);
+}
+.auth-btn:hover::after {
+  animation: auth-shimmer 0.8s ease-in-out;
+}
+.auth-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 30px rgba(74,93,46,0.3), 0 0 40px rgba(74,93,46,0.1);
+}
+.auth-btn:active {
+  transform: translateY(0);
+}
+.light-theme .auth-btn:hover {
+  box-shadow: 0 8px 30px rgba(74,93,46,0.2), 0 0 30px rgba(74,93,46,0.08);
+}
+
+.auth-bg-grid {
+  background-image:
+    linear-gradient(rgba(74,93,46,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74,93,46,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+.light-theme .auth-bg-grid {
+  background-image:
+    linear-gradient(rgba(74,93,46,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74,93,46,0.06) 1px, transparent 1px);
+}
+
+.auth-scan-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(74,93,46,0.3), transparent);
+  animation: auth-scan 8s ease-in-out infinite;
+}
+.light-theme .auth-scan-line::after {
+  background: linear-gradient(90deg, transparent, rgba(74,93,46,0.15), transparent);
+}
+
+/* ── Light theme form & status overrides ── */
+.light-theme select,
+.light-theme input[type="date"] {
+  color-scheme: light;
+}
+.light-theme .bg-red-950\/40 { background-color: rgba(254,226,226,0.6); }
+.light-theme .bg-emerald-950\/40 { background-color: rgba(209,250,229,0.6); }
+.light-theme .text-red-300 { color: #dc2626; }
+.light-theme .text-emerald-300 { color: #059669; }
+.light-theme .border-red-700\/30 { border-color: rgba(220,38,38,0.2); }
+.light-theme .border-emerald-700\/30 { border-color: rgba(5,150,105,0.2); }
+
+/* Light theme: very pale amber text becomes dark amber for readability */
+.light-theme .text-amber-50 { color: #451a03; }
+.light-theme .text-amber-200 { color: #92400e; }
+.light-theme .text-amber-200\/60 { color: rgba(146, 64, 14, 0.75); }
+.light-theme .text-amber-200\/70 { color: rgba(146, 64, 14, 0.85); }
+.light-theme .text-amber-300 { color: #b45309; }
+.light-theme .text-amber-300\/80 { color: rgba(180, 83, 9, 0.9); }
+.light-theme .text-amber-400\/60 { color: #b45309; }
+.light-theme .text-amber-400\/70 { color: #b45309; }
+
+/* Light theme sidebar shadow ── */
+.light-theme .sidebar-wrap {
+  box-shadow: 2px 0 12px rgba(74,93,46,0.08);
+}
+
+/* Invisible scrollbar for sidebar */
+.sidebar-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.docx-preview-host .docx-wrapper {
+  background: #fff;
+  padding: 1rem;
+}
+
+.doc-sheet-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.doc-sheet-preview th,
+.doc-sheet-preview td {
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.doc-sheet-preview th {
+  background: #f1f5f9;
+  font-weight: 600;
+}
+

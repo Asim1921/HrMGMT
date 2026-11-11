@@ -1,0 +1,415 @@
+// 101HRMgmt - Military HR Management
+// Prisma schema for PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  super_admin
+  admin
+  user
+}
+
+enum UserStatus {
+  active
+  inactive
+  suspended
+}
+
+enum LeaveType {
+  casual
+  medical
+  emergency
+  unpaid
+}
+
+enum LeaveRequestStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  leave
+  holiday
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  employeeId   String?    @unique @map("employee_id")
+  fullName     String     @map("full_name")
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  role         UserRole   @default(user)
+  rank         String?
+  unit         String?
+  reportingToId String?   @map("reporting_to_id") @db.Uuid
+  status       UserStatus @default(active)
+  designation  String?
+  approvalLevel Int?      @map("approval_level")
+  profilePicture String?  @map("profile_picture")
+  emailNotifications Boolean @default(true) @map("email_notifications")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  reportingTo   User?    @relation("UserReportsTo", fields: [reportingToId], references: [id])
+  directReports User[]   @relation("UserReportsTo")
+  leaveBalances LeaveBalance[]
+  leaveRequestsAsApplicant LeaveRequest[] @relation("LeaveRequestApplicant")
+  leaveRequestsAsReviewer  LeaveRequest[] @relation("LeaveRequestReviewer")
+  leaveRequestsApprovedG2  LeaveRequest[] @relation("LeaveApprovedByG2")
+  leaveRequestsApprovedG1  LeaveRequest[] @relation("LeaveApprovedByG1")
+  leaveRequestsApprovedComdt LeaveRequest[] @relation("LeaveApprovedByComdt")
+  attendance    Attendance[]
+  approvalHierarchyAsApprover ApprovalHierarchy[] @relation("Approver")
+  approvalHierarchyAsApprovee ApprovalHierarchy[] @relation("Approvee")
+  notifications Notification[]
+  announcements Announcement[]
+  holidaysCreated Holiday[]
+  auditLogs     AuditLog[]
+  documents     Document[]       @relation("DocOwner")
+  tasksAssigned Task[]           @relation("TaskAssignee")
+  tasksCreated  Task[]           @relation("TaskCreator")
+  taskComments  TaskComment[]
+  leaveRequestComments LeaveRequestComment[]
+  lastSeen      DateTime?  @map("last_seen")
+  isOnline      Boolean    @default(false) @map("is_online")
+  conversationParticipants ConversationParticipant[]
+  sentMessages  Message[]  @relation("SentMessages")
+
+  @@map("users")
+}
+
+model LeaveBalance {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  year        Int      // fiscal/calendar year
+  totalDays   Int      @default(30) @map("total_days")
+  usedDays    Int      @default(0) @map("used_days")
+  pendingDays Int      @default(0) @map("pending_days")
+  // remaining_days computed as totalDays - usedDays - pendingDays in app
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year])
+  @@map("leave_balances")
+}
+
+model LeaveRequest {
+  id              String            @id @default(uuid()) @db.Uuid
+  userId          String            @map("user_id") @db.Uuid
+  leaveType       LeaveType         @map("leave_type")
+  startDate       DateTime          @map("start_date") @db.Date
+  endDate         DateTime          @map("end_date") @db.Date
+  totalDays       Int               @map("total_days")
+  reason          String?           @db.Text
+  status          LeaveRequestStatus @default(pending)
+  reviewedById    String?           @map("reviewed_by_id") @db.Uuid
+  reviewComment   String?           @map("review_comment") @db.Text
+  approvedByG2Id  String?           @map("approved_by_g2_id") @db.Uuid
+  approvedByG1Id  String?           @map("approved_by_g1_id") @db.Uuid
+  approvedByComdtId String?          @map("approved_by_comdt_id") @db.Uuid
+  approvedAtG2    DateTime?        @map("approved_at_g2")
+  approvedAtG1    DateTime?        @map("approved_at_g1")
+  approvedAtComdt DateTime?        @map("approved_at_comdt")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  user        User  @relation("LeaveRequestApplicant", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy  User? @relation("LeaveRequestReviewer", fields: [reviewedById], references: [id])
+  approvedByG2   User? @relation("LeaveApprovedByG2", fields: [approvedByG2Id], references: [id])
+  approvedByG1   User? @relation("LeaveApprovedByG1", fields: [approvedByG1Id], references: [id])
+  approvedByComdt User? @relation("LeaveApprovedByComdt", fields: [approvedByComdtId], references: [id])
+  comments    LeaveRequestComment[]
+
+  @@map("leave_requests")
+}
+
+model LeaveRequestComment {
+  id             String   @id @default(uuid()) @db.Uuid
+  leaveRequestId String   @map("leave_request_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  parentId       String?  @map("parent_id") @db.Uuid
+  message        String   @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  leaveRequest LeaveRequest          @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent       LeaveRequestComment?  @relation("LeaveCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      LeaveRequestComment[] @relation("LeaveCommentReplies")
+
+  @@index([leaveRequestId])
+  @@map("leave_request_comments")
+}
+
+model Attendance {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  date      DateTime         @db.Date
+  markedAt  DateTime         @map("marked_at")
+  status    AttendanceStatus @default(present)
+  ipAddress String?          @map("ip_address")
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("attendance")
+}
+
+model ApprovalHierarchy {
+  id          String @id @default(uuid()) @db.Uuid
+  approverId  String @map("approver_id") @db.Uuid
+  approveeId  String @map("approvee_id") @db.Uuid
+  level       Int    // 1=direct, 2=escalation
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  approver User @relation("Approver", fields: [approverId], references: [id], onDelete: Cascade)
+  approvee User @relation("Approvee", fields: [approveeId], references: [id], onDelete: Cascade)
+
+  @@map("approval_hierarchy")
+}
+
+model PasswordResetOtp {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String
+  otp       String
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@map("password_reset_otp")
+}
+
+// ── Phase 1 ──
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String   // leave_approved, leave_rejected, leave_request, attendance_reminder, etc.
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  link      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+enum AnnouncementPriority {
+  normal
+  urgent
+  critical
+}
+
+model Announcement {
+  id         String               @id @default(uuid()) @db.Uuid
+  title      String
+  content    String               @db.Text
+  priority   AnnouncementPriority @default(normal)
+  targetUnit String?              @map("target_unit")
+  postedById String               @map("posted_by_id") @db.Uuid
+  expiresAt  DateTime?            @map("expires_at")
+  createdAt  DateTime             @default(now()) @map("created_at")
+  updatedAt  DateTime             @updatedAt @map("updated_at")
+
+  postedBy User @relation(fields: [postedById], references: [id])
+
+  @@map("announcements")
+}
+
+model Holiday {
+  id          String   @id @default(uuid()) @db.Uuid
+  date        DateTime @db.Date
+  name        String
+  description String?
+  createdById String   @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@unique([date])
+  @@map("holidays")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String?  @map("actor_id") @db.Uuid
+  action    String
+  entity    String
+  entityId  String?  @map("entity_id")
+  details   Json?
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([entity])
+  @@map("audit_logs")
+}
+
+// ── Phase 2 ──
+
+model Document {
+  id           String         @id @default(uuid()) @db.Uuid
+  userId       String         @map("user_id") @db.Uuid
+  type         String
+  title        String
+  filePath     String         @map("file_path")
+  fileSize     Int            @map("file_size")
+  mimeType     String         @map("mime_type")
+  uploadedAt   DateTime       @default(now()) @map("uploaded_at")
+
+  user       User  @relation("DocOwner", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+// ── Phase 3 ──
+
+enum TaskStatus {
+  pending
+  in_progress
+  completed
+  approved
+  rejected
+  review
+  overdue
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+  critical
+}
+
+model Task {
+  id           String       @id @default(uuid()) @db.Uuid
+  title        String
+  description  String?      @db.Text
+  assignedToId String       @map("assigned_to_id") @db.Uuid
+  assignedById String       @map("assigned_by_id") @db.Uuid
+  priority     TaskPriority @default(medium)
+  status       TaskStatus   @default(pending)
+  dueDate      DateTime?    @map("due_date") @db.Date
+  completedAt  DateTime?    @map("completed_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  assignedTo User @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: Cascade)
+  assignedBy User @relation("TaskCreator", fields: [assignedById], references: [id])
+  comments   TaskComment[]
+
+  @@map("tasks")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  taskId    String   @map("task_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  message   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task        Task                    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments TaskCommentAttachment[]
+
+  @@map("task_comments")
+}
+
+model TaskCommentAttachment {
+  id        String   @id @default(uuid()) @db.Uuid
+  commentId String   @map("comment_id") @db.Uuid
+  filePath  String   @map("file_path")
+  fileName  String   @map("file_name")
+  fileType  String   @map("file_type")
+  fileSize  Int      @map("file_size")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment TaskComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@map("task_comment_attachments")
+}
+
+// ── Chat System ──
+
+enum MessageStatus {
+  sent
+  delivered
+  seen
+}
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  lastReadAt     DateTime? @map("last_read_at")
+  joinedAt       DateTime  @default(now()) @map("joined_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String        @id @default(uuid()) @db.Uuid
+  conversationId String        @map("conversation_id") @db.Uuid
+  senderId       String        @map("sender_id") @db.Uuid
+  content        String        @db.Text
+  contentIv      String        @map("content_iv")
+  status         MessageStatus @default(sent)
+  deliveredAt    DateTime?     @map("delivered_at")
+  seenAt         DateTime?     @map("seen_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  conversation Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User                @relation("SentMessages", fields: [senderId], references: [id])
+  attachments  MessageAttachment[]
+
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  filePath  String   @map("file_path")
+  fileName  String   @map("file_name")
+  fileType  String   @map("file_type")
+  fileSize  Int      @map("file_size")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("message_attachments")
+}
